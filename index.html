@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🕯 燭光冒險 — RPG 夏令營</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap');
+
+  :root {
+    --bg: #0a0608;
+    --surface: #110d10;
+    --panel: #1a1318;
+    --border: #3d2a38;
+    --gold: #d4a843;
+    --gold-dim: #8a6820;
+    --flame: #ff7c2a;
+    --flame2: #ffb347;
+    --cyan: #4fc3d0;
+    --purple: #9b59b6;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --text: #e8d5c0;
+    --text-dim: #8a7060;
+    --shadow-gold: 0 0 20px rgba(212,168,67,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Particle canvas */
+  #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+  /* Screens */
+  .screen { display: none; position: relative; z-index: 1; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* ===== TITLE SCREEN ===== */
+  #title-screen {
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 40%, #1e0f1a 0%, #0a0608 70%);
+  }
+
+  .title-container {
+    text-align: center;
+    animation: fadeInUp 1.2s ease both;
+  }
+
+  .title-flame {
+    font-size: 5rem;
+    animation: flicker 2s ease-in-out infinite alternate;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 0.8; text-shadow: 0 0 20px #ff7c2a, 0 0 40px #ff7c2a; transform: scale(1); }
+    100% { opacity: 1; text-shadow: 0 0 30px #ffb347, 0 0 60px #ff7c2a, 0 0 80px #d4a843; transform: scale(1.05); }
+  }
+
+  .title-main {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(2rem, 6vw, 4rem);
+    color: var(--gold);
+    text-shadow: var(--shadow-gold);
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+  }
+
+  .title-sub {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    margin: 1rem 0 2.5rem;
+    letter-spacing: 0.3em;
+  }
+
+  .title-divider {
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 1.5rem auto;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #2a1a08, #4a2e10);
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.1rem;
+    padding: 0.9rem 2.5rem;
+    cursor: pointer;
+    letter-spacing: 0.2em;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--gold), var(--flame));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .btn-primary:hover::before { opacity: 0.15; }
+  .btn-primary:hover {
+    box-shadow: 0 0 25px rgba(212,168,67,0.5);
+    transform: translateY(-2px);
+  }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  /* ===== HUD ===== */
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: none;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(180deg, rgba(10,6,8,0.95) 0%, transparent 100%);
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(4px);
+  }
+  #hud.visible { display: flex; }
+
+  .hud-left { display: flex; align-items: center; gap: 1rem; }
+
+  .hud-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background: var(--panel);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    box-shadow: 0 0 12px rgba(212,168,67,0.3);
+  }
+
+  .hud-name {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.95rem;
+    color: var(--gold);
+  }
+
+  .hud-hp-bar {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .bar-track {
+    width: 120px; height: 8px;
+    background: #1a0a0a;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #3a1a1a;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .bar-fill.hp { background: linear-gradient(90deg, #e74c3c, #ff6b6b); }
+  .bar-fill.xp { background: linear-gradient(90deg, var(--gold-dim), var(--gold)); }
+
+  .hud-day {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    color: var(--flame);
+    text-align: right;
+    letter-spacing: 0.05em;
+  }
+
+  /* ===== DAY SELECT ===== */
+  #day-screen {
+    padding: 5rem 2rem 3rem;
+    justify-content: flex-start;
+  }
+
+  .day-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    text-shadow: var(--shadow-gold);
+  }
+
+  .day-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 3rem;
+    letter-spacing: 0.2em;
+  }
+
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .day-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1.8rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  }
+
+  .day-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .day-card:hover::before { opacity: 1; }
+
+  .day-card[data-day="1"]::before { background: radial-gradient(ellipse at 50% 0%, rgba(255,124,42,0.12) 0%, transparent 70%); }
+  .day-card[data-day="2"]::before { background: radial-gradient(ellipse at 50% 0%, rgba(79,195,208,0.12) 0%, transparent 70%); }
+  .day-card[data-day="3"]::before { background: radial-gradient(ellipse at 50% 0%, rgba(46,204,113,0.12) 0%, transparent 70%); }
+  .day-card[data-day="4"]::before { background: radial-gradient(ellipse at 50% 0%, rgba(155,89,182,0.12) 0%, transparent 70%); }
+
+  .day-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(212,168,67,0.15);
+  }
+
+  .day-card.locked { opacity: 0.4; cursor: not-allowed; }
+  .day-card.locked:hover { transform: none; border-color: var(--border); box-shadow: none; }
+
+  .day-card.completed { border-color: var(--gold-dim); }
+
+  .day-number {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 0.75rem;
+  }
+
+  .day-icon { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+
+  .day-name {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .day-theme {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+    font-style: italic;
+  }
+
+  .day-quests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .quest-tag {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-dim);
+  }
+
+  .day-status {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    font-size: 1.2rem;
+  }
+
+  /* ===== QUEST SCREEN ===== */
+  #quest-screen {
+    padding: 5rem 2rem 3rem;
+    justify-content: flex-start;
+    align-items: stretch;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .quest-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .btn-back {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .btn-back:hover { border-color: var(--gold); color: var(--gold); }
+
+  .quest-day-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+  }
+
+  .quests-list { display: flex; flex-direction: column; gap: 1rem; }
+
+  .quest-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+
+  .quest-item:hover:not(.locked) {
+    border-color: var(--gold);
+    background: rgba(212,168,67,0.05);
+    transform: translateX(6px);
+  }
+
+  .quest-item.locked { opacity: 0.45; cursor: not-allowed; }
+  .quest-item.completed { border-color: var(--gold-dim); background: rgba(212,168,67,0.03); }
+
+  .quest-num {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.5rem;
+    color: var(--gold-dim);
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .quest-info { flex: 1; }
+  .quest-name {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .quest-sub { font-size: 0.8rem; color: var(--text-dim); }
+
+  .quest-reward {
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--gold-dim);
+  }
+
+  /* ===== BATTLE SCREEN ===== */
+  #battle-screen {
+    padding: 4.5rem 2rem 2rem;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+  }
+
+  .battle-container {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .battle-title-bar {
+    text-align: center;
+    padding: 1rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    clip-path: polygon(12px 0, 100% 0, calc(100%-12px) 100%, 0 100%);
+  }
+
+  .battle-title-bar h2 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.2rem;
+    color: var(--gold);
+  }
+
+  .battle-arena {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem 1rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    min-height: 220px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .battle-arena::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 100%, rgba(212,168,67,0.05) 0%, transparent 70%);
+  }
+
+  .combatant {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .combatant-emoji {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 12px rgba(212,168,67,0.3));
+  }
+
+  .combatant-emoji.shake {
+    animation: shake 0.4s ease;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px) rotate(-3deg); }
+    75% { transform: translateX(8px) rotate(3deg); }
+  }
+
+  .combatant-emoji.pulse {
+    animation: pulse 0.5s ease;
+  }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  .combatant-name {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.9rem;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  .combatant-hp {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 0.3rem;
+  }
+
+  .mini-bar {
+    width: 120px;
+    height: 6px;
+    background: #1a0a0a;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s;
+    background: linear-gradient(90deg, #e74c3c, #ff6b6b);
+  }
+
+  .vs-text {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.5rem;
+    color: var(--gold-dim);
+    text-shadow: 0 0 20px rgba(212,168,67,0.3);
+  }
+
+  .battle-log {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    min-height: 90px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    font-style: italic;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .battle-log::before {
+    content: '📜';
+    position: absolute;
+    top: 0.5rem; right: 0.75rem;
+    opacity: 0.3;
+    font-size: 1.2rem;
+  }
+
+  #log-text { color: var(--text); }
+
+  .battle-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .action-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  }
+
+  .action-btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    background: rgba(212,168,67,0.08);
+    color: var(--gold);
+    transform: translateY(-2px);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .action-btn .action-icon { font-size: 1.1rem; }
+  .action-btn .action-name { font-weight: 700; flex: 1; }
+  .action-btn .action-cost { font-size: 0.75rem; color: var(--gold-dim); }
+
+  /* ===== DIALOGUE SCREEN ===== */
+  #dialogue-screen {
+    justify-content: flex-end;
+    padding-bottom: 2rem;
+    background: rgba(0,0,0,0.5);
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: none;
+  }
+  #dialogue-screen.active { display: flex; }
+
+  .dialogue-scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .npc-sprite {
+    font-size: 6rem;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  .dialogue-box {
+    width: 100%;
+    max-width: 720px;
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    padding: 1.8rem;
+    position: relative;
+    box-shadow: 0 -4px 40px rgba(212,168,67,0.1);
+    clip-path: polygon(0 12px, 12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+    z-index: 1;
+  }
+
+  .dialogue-speaker {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.8rem;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dialogue-speaker::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold-dim), transparent);
+  }
+
+  .dialogue-text {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 1.2rem;
+    min-height: 60px;
+  }
+
+  .dialogue-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .choice-btn {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.9rem;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .choice-btn::before { content: '▸'; color: var(--gold-dim); }
+  .choice-btn:hover { border-color: var(--gold); background: rgba(212,168,67,0.07); color: var(--gold); }
+
+  /* ===== REWARD SCREEN ===== */
+  #reward-screen {
+    justify-content: center;
+    padding: 2rem;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.85);
+    display: none;
+  }
+  #reward-screen.active { display: flex; }
+
+  .reward-box {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    padding: 3rem 2.5rem;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 0 60px rgba(212,168,67,0.2);
+    clip-path: polygon(20px 0, 100% 0, calc(100%-20px) 100%, 0 100%);
+    animation: rewardPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes rewardPop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .reward-icon { font-size: 4rem; margin-bottom: 1rem; animation: spin 2s linear infinite; }
+  @keyframes spin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  .reward-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.3rem;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  .reward-item {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.1rem;
+    color: var(--flame2);
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(212,168,67,0.08);
+    border: 1px dashed var(--gold-dim);
+  }
+
+  .reward-desc {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ===== INVENTORY ===== */
+  #inventory-panel {
+    position: fixed;
+    right: -360px;
+    top: 0; bottom: 0;
+    width: 340px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 150;
+    transition: right 0.3s ease;
+    padding: 5rem 1.5rem 2rem;
+    overflow-y: auto;
+  }
+
+  #inventory-panel.open { right: 0; }
+
+  .inv-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .inv-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .inv-icon { font-size: 1.5rem; }
+  .inv-name { font-family: 'Noto Serif TC', serif; font-size: 0.9rem; color: var(--gold); }
+  .inv-desc { font-size: 0.75rem; color: var(--text-dim); }
+
+  /* ===== MAP ===== */
+  .map-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 1rem 0 2rem;
+    flex-wrap: wrap;
+  }
+
+  .map-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .map-circle {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    background: var(--surface);
+    transition: all 0.3s;
+  }
+
+  .map-circle.done { border-color: var(--gold); background: rgba(212,168,67,0.1); box-shadow: 0 0 12px rgba(212,168,67,0.3); }
+  .map-circle.active { border-color: var(--flame); background: rgba(255,124,42,0.1); box-shadow: 0 0 12px rgba(255,124,42,0.4); animation: glow 2s ease-in-out infinite alternate; }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 8px rgba(255,124,42,0.3); }
+    to { box-shadow: 0 0 20px rgba(255,124,42,0.6); }
+  }
+
+  .map-label { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.05em; }
+
+  .map-line {
+    width: 40px; height: 2px;
+    background: linear-gradient(90deg, var(--border), var(--border));
+    margin-bottom: 18px;
+    transition: background 0.3s;
+  }
+  .map-line.done { background: linear-gradient(90deg, var(--gold-dim), var(--gold-dim)); }
+
+  /* ===== MINIGAME ===== */
+  .minigame-container {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .minigame-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+
+  .memory-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    max-width: 320px;
+    margin: 0 auto 1rem;
+  }
+
+  .memory-card {
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    user-select: none;
+  }
+
+  .memory-card.flipped { background: rgba(212,168,67,0.1); border-color: var(--gold); }
+  .memory-card.matched { background: rgba(46,204,113,0.1); border-color: var(--green); }
+  .memory-card:hover:not(.matched) { border-color: var(--gold-dim); }
+
+  .emotion-wheel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    max-width: 360px;
+    margin: 0 auto 1rem;
+  }
+
+  .emotion-btn {
+    padding: 0.7rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+
+  .emotion-btn:hover { border-color: var(--gold); background: rgba(212,168,67,0.05); }
+  .emotion-btn .em-icon { font-size: 1.4rem; }
+
+  .typing-game {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .typing-prompt {
+    background: var(--surface);
+    padding: 1rem;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
+
+  .typing-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+  .typing-input:focus { border-color: var(--gold); }
+
+  .trust-game {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .trust-scene {
+    font-size: 3rem;
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .trust-path {
+    height: 60px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 1rem 0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .trust-player {
+    position: absolute;
+    left: 10%;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    transition: left 0.5s;
+  }
+
+  .trust-guide {
+    position: absolute;
+    right: 10%;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    animation: guideFloat 1.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes guideFloat {
+    from { transform: translateY(-60%); }
+    to { transform: translateY(-40%); }
+  }
+
+  /* Progress bar for battle */
+  .progress-bar-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .progress-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    min-width: 60px;
+  }
+
+  .progress-track {
+    flex: 1;
+    height: 8px;
+    background: #0a0608;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    transition: width 0.5s;
+  }
+
+  .progress-text {
+    font-size: 0.75rem;
+    color: var(--gold);
+    min-width: 50px;
+    text-align: right;
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .fade-in { animation: fadeInUp 0.5s ease both; }
+
+  /* Tooltip */
+  .tooltip {
+    position: relative;
+  }
+  .tooltip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .tooltip:hover::after { opacity: 1; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Floating menu btn */
+  #inv-toggle {
+    position: fixed;
+    bottom: 1.5rem; right: 1.5rem;
+    z-index: 200;
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.3rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(212,168,67,0.2);
+    transition: all 0.2s;
+  }
+  #inv-toggle.visible { display: flex; }
+  #inv-toggle:hover { box-shadow: 0 0 30px rgba(212,168,67,0.4); transform: scale(1.1); }
+
+  /* Stats bar */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.6rem;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.3rem;
+    color: var(--gold);
+  }
+
+  .stat-lbl {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-top: 0.2rem;
+  }
+
+  /* Day colors */
+  .day1 { color: var(--flame); }
+  .day2 { color: var(--cyan); }
+  .day3 { color: var(--green); }
+  .day4 { color: var(--purple); }
+
+  .day1 .day-number { color: var(--flame); }
+  .day2 .day-number { color: var(--cyan); }
+  .day3 .day-number { color: var(--green); }
+  .day4 .day-number { color: var(--purple); }
+
+  /* Skip button */
+  .skip-hint {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+  }
+  .skip-hint:hover { color: var(--gold-dim); }
+
+  /* Notification */
+  .notif {
+    position: fixed;
+    top: 4.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+    font-family: 'Noto Serif TC', serif;
+    animation: notifPop 3s ease forwards;
+    white-space: nowrap;
+  }
+
+  @keyframes notifPop {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+
+  @media (max-width: 600px) {
+    .days-grid { grid-template-columns: 1fr; }
+    .battle-actions { grid-template-columns: 1fr; }
+    .memory-grid { grid-template-columns: repeat(4, 1fr); gap: 0.3rem; }
+    .map-line { width: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-avatar" id="hud-avatar">🧒</div>
+    <div>
+      <div class="hud-name" id="hud-name">冒險者</div>
+      <div class="hud-hp-bar">
+        ❤️
+        <div class="bar-track"><div class="bar-fill hp" id="hp-bar" style="width:100%"></div></div>
+        <span id="hp-text">100/100</span>
+      </div>
+      <div class="hud-hp-bar">
+        ✨
+        <div class="bar-track"><div class="bar-fill xp" id="xp-bar" style="width:0%"></div></div>
+        <span id="xp-text">0 XP</span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="hud-day" id="hud-day">🕯 Day 1</div>
+    <div style="text-align:right; font-size:0.75rem; color:var(--gold-dim); margin-top:0.2rem;">
+      <span id="hud-score">🏆 0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Inventory Panel -->
+<div id="inventory-panel">
+  <div class="inv-title">🎒 背包道具</div>
+  <div id="inv-items"></div>
+  <div class="stat-grid" style="margin-top:1.5rem;">
+    <div class="stat-box">
+      <div class="stat-val" id="stat-atk">5</div>
+      <div class="stat-lbl">攻擊</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-def">3</div>
+      <div class="stat-lbl">防禦</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-spd">4</div>
+      <div class="stat-lbl">速度</div>
+    </div>
+  </div>
+</div>
+
+<button id="inv-toggle" onclick="toggleInventory()">🎒</button>
+
+<!-- ===== TITLE SCREEN ===== -->
+<div id="title-screen" class="screen active">
+  <div class="title-container">
+    <span class="title-flame">🕯</span>
+    <div class="title-main">燭光冒險</div>
+    <div class="title-sub">RPG 夏令營 · 四天奇旅</div>
+    <div class="title-divider"></div>
+    <p style="font-size:0.9rem; color:var(--text-dim); margin-bottom:2rem; line-height:1.8; max-width:380px;">
+      你的燭光即將點燃。<br>穿越自我懷疑、情緒迷霧、停滯之鎖與孤獨巨像，<br>找回那個真正的自己。
+    </p>
+
+    <div style="margin-bottom:2rem;">
+      <label style="display:block; font-size:0.8rem; color:var(--text-dim); margin-bottom:0.5rem; letter-spacing:0.2em;">✍️ 輸入你的冒險者名稱</label>
+      <input id="player-name-input" type="text" placeholder="你的名字…" maxlength="10"
+        style="background:var(--panel); border:1px solid var(--border); color:var(--text); padding:0.7rem 1.2rem; font-size:1rem; width:240px; text-align:center; outline:none; font-family:'Noto Serif TC',serif;"
+        onkeydown="if(event.key==='Enter') startGame()">
+    </div>
+
+    <button class="btn-primary" onclick="startGame()"><span>🕯 開始冒險</span></button>
+    <div class="skip-hint" onclick="startGameDemo()" style="margin-top:1rem;">⚡ 快速演示模式</div>
+  </div>
+</div>
+
+<!-- ===== DAY SELECT SCREEN ===== -->
+<div id="day-screen" class="screen">
+  <div style="width:100%; max-width:1100px;">
+    <div class="day-title">選擇你的冒險</div>
+    <div class="day-subtitle">四天主線 · 十六個試煉</div>
+
+    <!-- Map progress -->
+    <div class="map-progress" id="map-progress"></div>
+
+    <div class="days-grid">
+      <div class="day-card day1" data-day="1" id="day-card-1" onclick="openDay(1)">
+        <div class="day-status" id="day-status-1">🔓</div>
+        <div class="day-number">DAY ONE</div>
+        <span class="day-icon">🕯</span>
+        <div class="day-name">自我懷疑</div>
+        <div class="day-theme">主線：打破「我做不到」</div>
+        <div class="day-quests">
+          <span class="quest-tag">尋找燭光</span>
+          <span class="quest-tag">勇氣故事</span>
+          <span class="quest-tag">燭光試煉</span>
+          <span class="quest-tag">平衡之塔</span>
+        </div>
+      </div>
+
+      <div class="day-card day2 locked" data-day="2" id="day-card-2" onclick="openDay(2)">
+        <div class="day-status" id="day-status-2">🔒</div>
+        <div class="day-number">DAY TWO</div>
+        <span class="day-icon">🌊</span>
+        <div class="day-name">情緒迷霧</div>
+        <div class="day-theme">主線：看懂自己的內心</div>
+        <div class="day-quests">
+          <span class="quest-tag">共鳴之音</span>
+          <span class="quest-tag">情緒色彩</span>
+          <span class="quest-tag">命運之輪</span>
+          <span class="quest-tag">變色魔法</span>
+        </div>
+      </div>
+
+      <div class="day-card day3 locked" data-day="3" id="day-card-3" onclick="openDay(3)">
+        <div class="day-status" id="day-status-3">🔒</div>
+        <div class="day-number">DAY THREE</div>
+        <span class="day-icon">⚡</span>
+        <div class="day-name">停滯之鎖</div>
+        <div class="day-theme">主線：從「不敢」→「去做」</div>
+        <div class="day-quests">
+          <span class="quest-tag">捕捉光印</span>
+          <span class="quest-tag">巨獸謎團</span>
+          <span class="quest-tag">體能試煉</span>
+          <span class="quest-tag">泡泡魔法</span>
+        </div>
+      </div>
+
+      <div class="day-card day4 locked" data-day="4" id="day-card-4" onclick="openDay(4)">
+        <div class="day-status" id="day-status-4">🔒</div>
+        <div class="day-number">DAY FOUR</div>
+        <span class="day-icon">🌟</span>
+        <div class="day-name">孤獨巨像</div>
+        <div class="day-theme">主線：我不再是一個人</div>
+        <div class="day-quests">
+          <span class="quest-tag">黑暗引路</span>
+          <span class="quest-tag">回憶之書</span>
+          <span class="quest-tag">水神試煉</span>
+          <span class="quest-tag">最終決戰</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUEST LIST SCREEN ===== -->
+<div id="quest-screen" class="screen">
+  <div class="quest-header">
+    <button class="btn-back" onclick="showScreen('day-screen')">◀ 返回地圖</button>
+    <div class="quest-day-title" id="quest-day-title">Day 1 · 自我懷疑</div>
+  </div>
+  <div class="quests-list" id="quests-list"></div>
+</div>
+
+<!-- ===== DIALOGUE SCREEN ===== -->
+<div id="dialogue-screen">
+  <div class="dialogue-scene">
+    <div class="npc-sprite" id="npc-sprite">🧙</div>
+  </div>
+  <div class="dialogue-box">
+    <div class="dialogue-speaker" id="dialogue-speaker">神秘老人</div>
+    <div class="dialogue-text" id="dialogue-text">……</div>
+    <div class="dialogue-choices" id="dialogue-choices"></div>
+    <div class="skip-hint" onclick="skipDialogue()">按任意處跳過 ▶</div>
+  </div>
+</div>
+
+<!-- ===== BATTLE SCREEN ===== -->
+<div id="battle-screen" class="screen">
+  <div class="battle-container fade-in">
+    <div class="battle-title-bar">
+      <h2 id="battle-quest-name">試煉名稱</h2>
+    </div>
+
+    <!-- Map mini -->
+    <div class="progress-bar-container">
+      <div class="progress-label">試煉進度</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="battle-progress" style="width:0%"></div>
+      </div>
+      <div class="progress-text" id="battle-progress-text">0/3</div>
+    </div>
+
+    <!-- Arena -->
+    <div class="battle-arena" id="battle-arena">
+      <div class="combatant" id="player-combatant">
+        <span class="combatant-emoji" id="player-emoji">🧒</span>
+        <div class="combatant-name" id="player-cname">冒險者</div>
+        <div class="combatant-hp" id="player-hp">HP: 100/100</div>
+        <div class="mini-bar"><div class="mini-bar-fill" id="player-hp-bar" style="width:100%"></div></div>
+      </div>
+      <div class="vs-text">⚔️</div>
+      <div class="combatant" id="enemy-combatant">
+        <span class="combatant-emoji" id="enemy-emoji">😈</span>
+        <div class="combatant-name" id="enemy-name">自我懷疑</div>
+        <div class="combatant-hp" id="enemy-hp">HP: 100/100</div>
+        <div class="mini-bar"><div class="mini-bar-fill" id="enemy-hp-bar" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <!-- Minigame area -->
+    <div id="minigame-area"></div>
+
+    <!-- Log -->
+    <div class="battle-log">
+      <div id="log-text">戰鬥開始！選擇你的行動…</div>
+    </div>
+
+    <!-- Actions -->
+    <div class="battle-actions" id="battle-actions">
+      <button class="action-btn" id="act-attack" onclick="doAction('attack')">
+        <span class="action-icon">⚔️</span>
+        <span class="action-name">勇氣攻擊</span>
+        <span class="action-cost">-0 MP</span>
+      </button>
+      <button class="action-btn" id="act-skill" onclick="doAction('skill')">
+        <span class="action-icon">✨</span>
+        <span class="action-name">特殊技能</span>
+        <span class="action-cost">-20 MP</span>
+      </button>
+      <button class="action-btn" id="act-item" onclick="doAction('item')">
+        <span class="action-icon">🍬</span>
+        <span class="action-name">使用道具</span>
+        <span class="action-cost">回血+20</span>
+      </button>
+      <button class="action-btn" id="act-defend" onclick="doAction('defend')">
+        <span class="action-icon">🛡️</span>
+        <span class="action-name">守護心念</span>
+        <span class="action-cost">減傷50%</span>
+      </button>
+    </div>
+
+    <button class="btn-back" onclick="showScreen('quest-screen')" style="margin-top:0.5rem; width:100%; text-align:center;">
+      ← 放棄試煉（返回列表）
+    </button>
+  </div>
+</div>
+
+<!-- ===== REWARD SCREEN ===== -->
+<div id="reward-screen">
+  <div class="reward-box">
+    <div class="reward-icon" id="reward-icon">⭐</div>
+    <div class="reward-title">試煉完成！</div>
+    <div class="reward-item" id="reward-item">獲得道具：勇氣之心</div>
+    <div class="reward-desc" id="reward-desc">你成功突破了自我懷疑，燭光在你心中更加明亮。</div>
+    <button class="btn-primary" onclick="closeReward()"><span>✨ 繼續冒險</span></button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  GAME DATA
+// ============================================================
+const DAYS_DATA = [
+  {
+    id: 1, name: '自我懷疑', icon: '🕯', theme: '打破「我做不到」',
+    enemy: { name: '自我懷疑之影', emoji: '👤', maxHp: 80, atk: 12, color: '#ff7c2a' },
+    quests: [
+      {
+        id: 'q1_1', name: '【尋找心中的燭光】', sub: '我的夢想', icon: '🌟',
+        reward: '燭光碎片', rewardIcon: '🕯',
+        rewardDesc: '你說出了自己的夢想。燭光在你心中點燃，這是一切的開始。',
+        xp: 80, type: 'typing',
+        prompt: '輸入你的夢想（例如：我想成為藝術家）',
+        npc: '🧙', npcName: '嚮導老人',
+        dialogue: ['孩子，在這片黑暗的大地上，你的燭光是唯一的指引…', '告訴我，你心中最渴望成為的是什麼？', '不要害怕說出口，夢想是你最強大的武器。']
+      },
+      {
+        id: 'q1_2', name: '【勇氣故事的啟示】', sub: '繪本時間', icon: '📖',
+        reward: '入場券', rewardIcon: '🎟️',
+        rewardDesc: '你聽見了別人的勇氣故事，那也是你的故事。你也可以試試看。',
+        xp: 70, type: 'choices',
+        choices: ['「我試試看。」', '「這和我有什麼關係？」', '「原來別人也曾害怕！」', '「我也能像他一樣！」'],
+        correct: [0, 2, 3],
+        npc: '📚', npcName: '故事守護者',
+        dialogue: ['很久很久以前，有一個和你一樣害怕的小孩…', '他害怕失敗，害怕別人的眼光，就像你現在一樣。', '但他勇敢地踏出了一步，然後一切都改變了。']
+      },
+      {
+        id: 'q1_3', name: '【燭光碎片的試煉】', sub: '一般大地', icon: '💎',
+        reward: '精熟感', rewardIcon: '⚡',
+        rewardDesc: '「我做到了！」這四個字，是你最強的魔法咒語。',
+        xp: 90, type: 'memory',
+        npc: '🔮', npcName: '試煉之神',
+        dialogue: ['新手冒險者，準備好你的第一個試煉了嗎？', '翻開相對應的記憶碎片，收集你的第一塊燭光！', '記住：完成它，你就是勝利者。']
+      },
+      {
+        id: 'q1_4', name: '【平衡之塔的挑戰】', sub: '平衡鳥', icon: '⚖️',
+        reward: '平衡之心', rewardIcon: '🌀',
+        rewardDesc: '你屏息靜心，親手擊敗了搖晃的自我懷疑。你比自己以為的更強！',
+        xp: 100, type: 'battle',
+        npc: '🦅', npcName: '平衡之神',
+        dialogue: ['自我懷疑化為巨塔，矗立在你面前！', '靜下心來，召喚你內心的平靜之力！', '記住：靜下心就能做到。準備戰鬥吧！']
+      }
+    ]
+  },
+  {
+    id: 2, name: '情緒迷霧', icon: '🌊', theme: '看懂自己的內心',
+    enemy: { name: '情緒迷霧怪', emoji: '🌀', maxHp: 100, atk: 15, color: '#4fc3d0' },
+    quests: [
+      {
+        id: 'q2_1', name: '【共鳴之音的誕生】', sub: '拇指琴', icon: '🎵',
+        reward: '感知道具', rewardIcon: '🎶',
+        rewardDesc: '你第一次感受到：原來情緒是有聲音的。音符在你指尖流淌。',
+        xp: 80, type: 'emotion',
+        npc: '🎸', npcName: '音樂精靈',
+        dialogue: ['在迷霧之中，你聽見了一種奇妙的聲音…', '那是你內心的聲音！讓它透過音符流出來。', '選擇你現在的感受，讓音樂告訴你它的名字。']
+      },
+      {
+        id: 'q2_2', name: '【情緒色彩的軌跡】', sub: '泡泡畫', icon: '🎨',
+        reward: '情緒顯影術', rewardIcon: '🌈',
+        rewardDesc: '你把看不見的情緒，變成了眼前可見的色彩。情緒不再神秘。',
+        xp: 85, type: 'choices',
+        choices: ['藍色——平靜如水', '紅色——熱情似火', '黑色——沉重悲傷', '黃色——快樂陽光'],
+        correct: [0, 1, 2, 3],
+        npc: '🎨', npcName: '色彩女神',
+        dialogue: ['情緒就像顏色，每一種都有它的意義。', '選出你今天感受到的顏色！', '沒有對錯，只有真實。']
+      },
+      {
+        id: 'q2_3', name: '【命運之輪的試煉】', sub: '夜市', icon: '🎡',
+        reward: '決策智慧', rewardIcon: '⚖️',
+        rewardDesc: '你學到了：情緒會影響選擇。認識情緒，才能做出更好的決定！',
+        xp: 90, type: 'memory',
+        npc: '🎪', npcName: '命運商人',
+        dialogue: ['歡迎來到命運夜市！你只有有限的金幣。', '每個選擇都有重量——情緒穩定的人，才能做出最好的選擇！', '翻開卡牌，找到你的智慧！']
+      },
+      {
+        id: 'q2_4', name: '【變色魔法的秘密】', sub: '蝶豆花', icon: '🔮',
+        reward: '情緒彈性', rewardIcon: '💧',
+        rewardDesc: '就像蝶豆花的魔法：情緒可以流動，可以改變，不需要害怕它。',
+        xp: 100, type: 'battle',
+        npc: '🦋', npcName: '蝶豆花仙子',
+        dialogue: ['看！這朵花加入不同的東西，就會變色！', '情緒也是如此——它不是永久的黑暗，而是流動的顏色。', '打敗情緒迷霧怪，讓你的情緒自由流動！']
+      }
+    ]
+  },
+  {
+    id: 3, name: '停滯之鎖', icon: '⚡', theme: '從「不敢」→「去做」',
+    enemy: { name: '停滯之鎖守衛', emoji: '🔒', maxHp: 120, atk: 18, color: '#2ecc71' },
+    quests: [
+      {
+        id: 'q3_1', name: '【捕捉光的印記】', sub: '藍印術', icon: '🔵',
+        reward: '行動之鑰', rewardIcon: '🗝️',
+        rewardDesc: '你相信自己的行動會產生結果，第一次主動出擊！',
+        xp: 85, type: 'typing',
+        prompt: '輸入一件你一直「不敢做」但想嘗試的事',
+        npc: '☀️', npcName: '陽光印師',
+        dialogue: ['陽光會把你的勇氣刻進布料裡，永遠留下你的印記。', '但首先，你必須說出那件你一直不敢做的事！', '勇敢地說出口，陽光就會幫你封印它。']
+      },
+      {
+        id: 'q3_2', name: '【巨獸酷斯拉的謎團】', sub: '體驗教育', icon: '🦖',
+        reward: '問題分解術', rewardIcon: '🧩',
+        rewardDesc: '巨獸其實是可以被打敗的！把大問題拆成小步驟，一切都會越來越清晰。',
+        xp: 95, type: 'choices',
+        choices: ['「太難了，我放棄。」', '「一步一步來，先找弱點。」', '「找夥伴一起！」', '「把大問題拆成小問題！」'],
+        correct: [1, 2, 3],
+        npc: '🦖', npcName: '謎題巨獸',
+        dialogue: ['ROAAAAR！我是阻擋你的停滯之獸！', '要打敗我，只需要找到正確的策略…', '告訴我，你會怎麼面對看起來很難的挑戰？']
+      },
+      {
+        id: 'q3_3', name: '【冒險者體能試煉】', sub: '運動會', icon: '🏃',
+        reward: '行動力爆發', rewardIcon: '💨',
+        rewardDesc: '身體動了，心也跟著動了！不是等到準備好才做，而是在做的過程中準備好！',
+        xp: 90, type: 'memory',
+        npc: '🏅', npcName: '運動之神',
+        dialogue: ['停滯的鎖靠思考打不開，只有行動才能突破！', '完成記憶挑戰，釋放你積累已久的能量！', '動起來！身體動了，靈魂也會跟著動！']
+      },
+      {
+        id: 'q3_4', name: '【泡泡魔法師的實驗室】', sub: '泡泡實驗', icon: '🫧',
+        reward: '實驗精神', rewardIcon: '🔭',
+        rewardDesc: '不嘗試，永遠不知道泡泡可以有多大。每一次嘗試都讓你更靠近「我可以做到」！',
+        xp: 100, type: 'battle',
+        npc: '🧪', npcName: '泡泡魔法師',
+        dialogue: ['歡迎來到泡泡實驗室！這裡沒有失敗，只有實驗！', '打敗停滯之鎖，釋放你的魔法！', '記住：願意動手，奇蹟就會發生！']
+      }
+    ]
+  },
+  {
+    id: 4, name: '孤獨巨像', icon: '🌟', theme: '我不再是一個人',
+    enemy: { name: '孤獨巨像', emoji: '🗿', maxHp: 150, atk: 20, color: '#9b59b6' },
+    quests: [
+      {
+        id: 'q4_1', name: '【黑暗中的引路人】', sub: '聽見校園聲音', icon: '👂',
+        reward: '傾聽之耳', rewardIcon: '🌙',
+        rewardDesc: '你學會了把注意力放到別人身上，體驗「讓別人帶領」的安全感。',
+        xp: 90, type: 'emotion',
+        npc: '🌑', npcName: '黑暗引路人',
+        dialogue: ['閉上眼睛，讓黑暗成為你的朋友。', '你聽見了什麼？風聲？腳步聲？夥伴的呼吸聲？', '放下控制，讓別人的聲音引導你——這就是信任的第一步。']
+      },
+      {
+        id: 'q4_2', name: '【冒險者的回憶之書】', sub: '回憶相簿', icon: '📸',
+        reward: '成長故事書', rewardIcon: '📖',
+        rewardDesc: '你看見了自己的成長。一路上，從來都不是一個人在走。',
+        xp: 95, type: 'typing',
+        prompt: '寫下這四天裡，讓你最感謝的一個夥伴和一件事',
+        npc: '📷', npcName: '記憶守護者',
+        dialogue: ['你手中有一本神奇的相簿…', '它記載著你從第一天到現在的每一步成長。', '孤獨的巨像最害怕這本書，因為它能讓你看見：你從來都不是一個人。']
+      },
+      {
+        id: 'q4_3', name: '【水之神最終試煉】', sub: '水大地', icon: '💧',
+        reward: '連結之力', rewardIcon: '🌊',
+        rewardDesc: '水代表流動、連結與包容。因為有你，我才能做到！',
+        xp: 100, type: 'trust',
+        npc: '🌊', npcName: '水之神',
+        dialogue: ['最終的試煉到來了！', '水可以流動、連結、包容——就像真正的友誼。', '讓夥伴引導你，一起完成這最後的挑戰！']
+      },
+      {
+        id: 'q4_4', name: '【孤獨巨像最終決戰】', sub: '四天總決戰', icon: '⚔️',
+        reward: '燭光完整版', rewardIcon: '🕯',
+        rewardDesc: '你集齊了自信、情緒智慧、行動力與信任。燭光熊熊燃燒——你成功了！',
+        xp: 150, type: 'final_battle',
+        npc: '🗿', npcName: '孤獨巨像',
+        dialogue: ['哈！你真的來了，渺小的冒險者。', '四天的成長，足以讓你與我一戰嗎？', '展示你所有的力量！這是你最後的試煉！']
+      }
+    ]
+  }
+];
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let state = {
+  playerName: '冒險者',
+  hp: 100, maxHp: 100,
+  mp: 100, maxMp: 100,
+  xp: 0, score: 0,
+  atk: 5, def: 3, spd: 4,
+  unlockedDays: [1],
+  completedQuests: [],
+  inventory: [],
+  currentDay: 1,
+  currentQuest: null,
+  battleState: null
+};
+
+const AVATARS = ['🧒', '🧒‍♀️', '🧑', '🧑‍🦱'];
+let avatarIdx = 0;
+
+// ============================================================
+//  PARTICLES
+// ============================================================
+(function initParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.5 - 0.2,
+      r: Math.random() * 2 + 0.5,
+      a: Math.random(),
+      color: Math.random() > 0.7 ? '#d4a843' : Math.random() > 0.5 ? '#ff7c2a' : '#6a4a8a'
+    });
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.a -= 0.003;
+      if (p.a <= 0 || p.y < -10) {
+        p.x = Math.random() * canvas.width;
+        p.y = canvas.height + 10;
+        p.a = Math.random() * 0.6 + 0.2;
+        p.vy = -Math.random() * 0.5 - 0.2;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + Math.floor(p.a * 255).toString(16).padStart(2, '0');
+      ctx.fill();
+    });
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ============================================================
+//  SCREEN MANAGEMENT
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const s = document.getElementById(id);
+  if (s) s.classList.add('active');
+
+  const hud = document.getElementById('hud');
+  const invToggle = document.getElementById('inv-toggle');
+  if (id === 'title-screen') {
+    hud.classList.remove('visible');
+    invToggle.classList.remove('visible');
+  } else {
+    hud.classList.add('visible');
+    invToggle.classList.add('visible');
+  }
+  updateHUD();
+}
+
+function updateHUD() {
+  document.getElementById('hud-name').textContent = state.playerName;
+  document.getElementById('hud-avatar').textContent = AVATARS[avatarIdx % AVATARS.length];
+  const hpPct = (state.hp / state.maxHp) * 100;
+  document.getElementById('hp-bar').style.width = hpPct + '%';
+  document.getElementById('hp-text').textContent = `${state.hp}/${state.maxHp}`;
+  const xpPct = Math.min((state.xp / 1000) * 100, 100);
+  document.getElementById('xp-bar').style.width = xpPct + '%';
+  document.getElementById('xp-text').textContent = `${state.xp} XP`;
+  document.getElementById('hud-score').textContent = `🏆 ${state.score}`;
+  const day = state.currentDay;
+  const dayNames = ['', '自我懷疑', '情緒迷霧', '停滯之鎖', '孤獨巨像'];
+  document.getElementById('hud-day').textContent = `🕯 Day ${day} · ${dayNames[day]}`;
+}
+
+// ============================================================
+//  START GAME
+// ============================================================
+function startGame() {
+  const nameInput = document.getElementById('player-name-input').value.trim();
+  state.playerName = nameInput || '無名冒險者';
+  showScreen('day-screen');
+  renderDayMap();
+  renderMapProgress();
+  showNotif(`✨ 歡迎，${state.playerName}！你的燭光冒險開始了！`);
+}
+
+function startGameDemo() {
+  state.playerName = '演示冒險者';
+  state.xp = 500; state.score = 1200;
+  state.unlockedDays = [1, 2, 3, 4];
+  state.completedQuests = ['q1_1', 'q1_2', 'q1_3', 'q2_1'];
+  state.inventory = [
+    { name: '燭光碎片', icon: '🕯', desc: '點燃你心中第一個夢想的火花' },
+    { name: '入場券', icon: '🎟️', desc: '進入冒險的勇氣通行證' },
+    { name: '感知道具', icon: '🎶', desc: '讓你聆聽內心情緒的神器' }
+  ];
+  showScreen('day-screen');
+  renderDayMap();
+  renderMapProgress();
+  showNotif('⚡ 演示模式：已解鎖所有天！');
+}
+
+// ============================================================
+//  DAY MAP
+// ============================================================
+function renderDayMap() {
+  DAYS_DATA.forEach(day => {
+    const card = document.getElementById(`day-card-${day.id}`);
+    const status = document.getElementById(`day-status-${day.id}`);
+    if (!card) return;
+
+    const completed = day.quests.every(q => state.completedQuests.includes(q.id));
+    const unlocked = state.unlockedDays.includes(day.id);
+
+    card.classList.toggle('locked', !unlocked);
+    card.classList.toggle('completed', completed);
+
+    if (completed) status.textContent = '✅';
+    else if (unlocked) status.textContent = '🔓';
+    else status.textContent = '🔒';
+  });
+}
+
+function renderMapProgress() {
+  const container = document.getElementById('map-progress');
+  container.innerHTML = '';
+  DAYS_DATA.forEach((day, i) => {
+    const completed = day.quests.every(q => state.completedQuests.includes(q.id));
+    const active = state.unlockedDays.includes(day.id) && !completed;
+
+    const node = document.createElement('div');
+    node.className = 'map-node';
+    node.innerHTML = `
+      <div class="map-circle ${completed ? 'done' : active ? 'active' : ''}">${day.icon}</div>
+      <div class="map-label">Day ${day.id}</div>
+    `;
+    container.appendChild(node);
+
+    if (i < DAYS_DATA.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'map-line' + (completed ? ' done' : '');
+      container.appendChild(line);
+    }
+  });
+}
+
+// ============================================================
+//  OPEN DAY
+// ============================================================
+function openDay(dayId) {
+  if (!state.unlockedDays.includes(dayId)) {
+    showNotif('🔒 請先完成前一天的試煉！');
+    return;
+  }
+  state.currentDay = dayId;
+  const day = DAYS_DATA[dayId - 1];
+
+  document.getElementById('quest-day-title').innerHTML =
+    `Day ${dayId} · <span class="day${dayId}">${day.name}</span>`;
+
+  renderQuestList(day);
+  showScreen('quest-screen');
+}
+
+function renderQuestList(day) {
+  const container = document.getElementById('quests-list');
+  container.innerHTML = '';
+
+  day.quests.forEach((quest, idx) => {
+    const completed = state.completedQuests.includes(quest.id);
+    const prevCompleted = idx === 0 || state.completedQuests.includes(day.quests[idx - 1].id);
+    const locked = !prevCompleted;
+
+    const item = document.createElement('div');
+    item.className = `quest-item ${completed ? 'completed' : ''} ${locked ? 'locked' : ''}`;
+    item.innerHTML = `
+      <div class="quest-num day${day.id}">${completed ? '✅' : locked ? '🔒' : quest.icon}</div>
+      <div class="quest-info">
+        <div class="quest-name">${quest.name}</div>
+        <div class="quest-sub">${quest.sub}</div>
+      </div>
+      <div class="quest-reward">+${quest.xp} XP<br><span style="color:var(--flame2)">${quest.rewardIcon}</span></div>
+    `;
+
+    if (!locked && !completed) {
+      item.onclick = () => startQuest(quest, day);
+    } else if (completed) {
+      item.onclick = () => showNotif('✅ 此試煉已完成！繼續下一個吧！');
+    } else {
+      item.onclick = () => showNotif('🔒 請先完成前一個試煉！');
+    }
+
+    container.appendChild(item);
+  });
+}
+
+// ============================================================
+//  START QUEST — DIALOGUE THEN MINIGAME/BATTLE
+// ============================================================
+function startQuest(quest, day) {
+  state.currentQuest = quest;
+  state.currentDay = day.id;
+  showDialogue(quest, () => launchQuestGame(quest, day));
+}
+
+function showDialogue(quest, onEnd) {
+  const screen = document.getElementById('dialogue-screen');
+  screen.classList.add('active');
+  document.getElementById('npc-sprite').textContent = quest.npc;
+  document.getElementById('dialogue-speaker').textContent = quest.npcName;
+
+  let lineIdx = 0;
+  const lines = quest.dialogue;
+
+  function showLine() {
+    if (lineIdx >= lines.length) {
+      screen.classList.remove('active');
+      onEnd();
+      return;
+    }
+    typeText('dialogue-text', lines[lineIdx], () => {
+      lineIdx++;
+    });
+
+    const choices = document.getElementById('dialogue-choices');
+    choices.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = lineIdx < lines.length - 1 ? '繼續…' : '開始試煉！';
+    btn.onclick = showLine;
+    choices.appendChild(btn);
+  }
+
+  showLine();
+  screen.onclick = (e) => {
+    if (e.target === screen) { lineIdx = lines.length - 1; showLine(); }
+  };
+}
+
+function skipDialogue() {
+  const screen = document.getElementById('dialogue-screen');
+  screen.classList.remove('active');
+  if (state.currentQuest) launchQuestGame(state.currentQuest, DAYS_DATA[state.currentDay - 1]);
+}
+
+function typeText(elId, text, cb) {
+  const el = document.getElementById(elId);
+  el.textContent = '';
+  let i = 0;
+  const timer = setInterval(() => {
+    el.textContent += text[i++];
+    if (i >= text.length) { clearInterval(timer); if (cb) cb(); }
+  }, 40);
+}
+
+// ============================================================
+//  LAUNCH QUEST GAME
+// ============================================================
+function launchQuestGame(quest, day) {
+  showScreen('battle-screen');
+  document.getElementById('battle-quest-name').textContent = quest.name;
+  document.getElementById('battle-progress').style.width = '0%';
+  document.getElementById('battle-progress-text').textContent = '0/3';
+
+  // Setup combatants
+  document.getElementById('player-emoji').textContent = AVATARS[avatarIdx % AVATARS.length];
+  document.getElementById('player-cname').textContent = state.playerName;
+  document.getElementById('enemy-emoji').textContent = day.enemy.emoji;
+  document.getElementById('enemy-name').textContent = day.enemy.name;
+
+  state.battleState = {
+    enemyHp: day.enemy.maxHp,
+    enemyMaxHp: day.enemy.maxHp,
+    playerHp: state.hp,
+    playerMaxHp: state.maxHp,
+    defending: false,
+    phase: 0,
+    totalPhases: 3,
+    minigameComplete: false,
+    questType: quest.type
+  };
+
+  updateBattleBars();
+  setLog('試煉開始！先完成心靈挑戰，再與敵人戰鬥！');
+  setActionsEnabled(false);
+
+  // Launch appropriate minigame
+  const area = document.getElementById('minigame-area');
+  area.innerHTML = '';
+
+  switch (quest.type) {
+    case 'typing': renderTypingGame(quest, area); break;
+    case 'choices': renderChoicesGame(quest, area); break;
+    case 'memory': renderMemoryGame(area); break;
+    case 'emotion': renderEmotionGame(area); break;
+    case 'trust': renderTrustGame(area); break;
+    case 'battle': renderBattleOnly(area); break;
+    case 'final_battle': renderFinalBattle(area); break;
+    default: renderBattleOnly(area);
+  }
+}
+
+function renderBattleOnly(area) {
+  area.innerHTML = `<div class="minigame-container">
+    <div class="minigame-title">💪 準備好了嗎？</div>
+    <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:1rem;">點擊「準備完成」進入戰鬥！</p>
+    <button class="btn-primary" onclick="completeMiniGame()"><span>⚔️ 準備完成！</span></button>
+  </div>`;
+}
+
+function renderFinalBattle(area) {
+  area.innerHTML = `<div class="minigame-container" style="background:rgba(155,89,182,0.05); border-color:#9b59b6">
+    <div class="minigame-title" style="color:#9b59b6">🌟 最終決戰準備</div>
+    <p style="color:var(--text-dim);font-size:0.85rem;margin:0.5rem 0 1rem;line-height:1.7;">
+      你集齊了四天所有的力量：<br>
+      🕯 自信 · 🌊 情緒智慧 · ⚡ 行動力 · 🌟 信任
+    </p>
+    <div style="display:flex;justify-content:center;gap:1rem;font-size:2rem;margin:1rem 0;">🕯🌊⚡🌟</div>
+    <button class="btn-primary" onclick="completeMiniGame()"><span>🗡️ 召喚全部力量，決戰！</span></button>
+  </div>`;
+}
+
+function renderTypingGame(quest, area) {
+  area.innerHTML = `<div class="minigame-container">
+    <div class="minigame-title">✍️ ${quest.prompt}</div>
+    <div class="typing-game">
+      <input class="typing-input" id="typing-ans" type="text" placeholder="寫下你的回答…" maxlength="30"
+        onkeydown="if(event.key==='Enter') checkTyping()">
+    </div>
+    <button class="btn-primary" onclick="checkTyping()" style="margin-top:0.75rem"><span>💫 確認</span></button>
+  </div>`;
+  setTimeout(() => document.getElementById('typing-ans')?.focus(), 100);
+}
+
+function checkTyping() {
+  const val = document.getElementById('typing-ans')?.value.trim();
+  if (!val || val.length < 2) { showNotif('✏️ 請輸入更多內容！'); return; }
+  setLog(`✨ 你說：「${val}」——勇敢說出口，力量就會出現！`);
+  completeMiniGame();
+}
+
+function renderChoicesGame(quest, area) {
+  area.innerHTML = `<div class="minigame-container">
+    <div class="minigame-title">🤔 選出正確的態度（可複選）</div>
+    <div class="emotion-wheel" id="choice-grid"></div>
+    <div id="choice-feedback" style="font-size:0.8rem;color:var(--text-dim);min-height:24px;margin:0.5rem 0;"></div>
+    <button class="btn-primary" onclick="checkChoices()" style="margin-top:0.25rem"><span>✅ 確認選擇</span></button>
+  </div>`;
+
+  const grid = document.getElementById('choice-grid');
+  quest.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'emotion-btn';
+    btn.dataset.idx = i;
+    btn.dataset.selected = 'false';
+    btn.innerHTML = `<span class="em-icon">💬</span>${c}`;
+    btn.onclick = () => {
+      const sel = btn.dataset.selected === 'true';
+      btn.dataset.selected = String(!sel);
+      btn.style.borderColor = !sel ? 'var(--gold)' : 'var(--border)';
+      btn.style.background = !sel ? 'rgba(212,168,67,0.1)' : '';
+    };
+    grid.appendChild(btn);
+  });
+
+  window._currentChoicesQuest = quest;
+}
+
+function checkChoices() {
+  const quest = window._currentChoicesQuest;
+  const selected = [...document.querySelectorAll('.emotion-btn[data-selected="true"]')].map(b => parseInt(b.dataset.idx));
+  if (selected.length === 0) { showNotif('請至少選一個！'); return; }
+
+  const correct = quest.correct || [];
+  const right = selected.filter(i => correct.includes(i)).length;
+  const msg = right >= Math.max(1, Math.ceil(correct.length / 2)) ?
+    '✨ 很好！你的選擇展現了成長的智慧！' : '💪 不錯！繼續練習這樣的思維！';
+  setLog(msg);
+  completeMiniGame();
+}
+
+function renderMemoryGame(area) {
+  const emojis = ['🕯', '⭐', '💎', '🎯', '🌟', '🔮', '⚡', '🌈'];
+  const cards = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+  let flipped = [], matched = 0, canClick = true;
+
+  area.innerHTML = `<div class="minigame-container">
+    <div class="minigame-title">🧠 記憶翻牌 — 找出所有配對！</div>
+    <div class="memory-grid" id="mem-grid"></div>
+    <div id="mem-status" style="font-size:0.8rem;color:var(--text-dim);">已配對：0/8</div>
+  </div>`;
+
+  const grid = document.getElementById('mem-grid');
+  cards.forEach((emoji, i) => {
+    const card = document.createElement('div');
+    card.className = 'memory-card';
+    card.dataset.emoji = emoji;
+    card.dataset.revealed = 'false';
+    card.textContent = '?';
+    card.onclick = () => {
+      if (!canClick || card.dataset.revealed === 'true' || card.classList.contains('matched')) return;
+      card.textContent = emoji;
+      card.classList.add('flipped');
+      card.dataset.revealed = 'true';
+      flipped.push(card);
+
+      if (flipped.length === 2) {
+        canClick = false;
+        setTimeout(() => {
+          if (flipped[0].dataset.emoji === flipped[1].dataset.emoji) {
+            flipped.forEach(c => c.classList.replace('flipped', 'matched'));
+            matched++;
+            document.getElementById('mem-status').textContent = `已配對：${matched}/8`;
+            if (matched === 8) { setLog('🧠 記憶力超強！所有碎片已找回！'); completeMiniGame(); }
+          } else {
+            flipped.forEach(c => { c.textContent = '?'; c.classList.remove('flipped'); c.dataset.revealed = 'false'; });
+          }
+          flipped = []; canClick = true;
+        }, 700);
+      }
+    };
+    grid.appendChild(card);
+  });
+}
+
+function renderEmotionGame(area) {
+  const emotions = [
+    { icon: '😊', name: '快樂', desc: '陽光滿滿' },
+    { icon: '😢', name: '悲傷', desc: '心情低落' },
+    { icon: '😰', name: '害怕', desc: '有點緊張' },
+    { icon: '😤', name: '憤怒', desc: '需要釋放' },
+    { icon: '🤩', name: '興奮', desc: '期待滿滿' },
+    { icon: '😌', name: '平靜', desc: '輕鬆自在' }
+  ];
+
+  area.innerHTML = `<div class="minigame-container">
+    <div class="minigame-title">💭 選出你現在最真實的感受</div>
+    <div class="emotion-wheel" id="emotion-grid"></div>
+    <div id="emotion-result" style="font-size:0.85rem;color:var(--text-dim);min-height:30px;margin:0.5rem 0;text-align:center;"></div>
+  </div>`;
+
+  const grid = document.getElementById('emotion-grid');
+  emotions.forEach(em => {
+    const btn = document.createElement('button');
+    btn.className = 'emotion-btn';
+    btn.innerHTML = `<span class="em-icon">${em.icon}</span>${em.name}<small style="color:var(--text-dim)">${em.desc}</small>`;
+    btn.onclick = () => {
+      document.getElementById('emotion-result').textContent = `你選擇了「${em.name}」${em.icon} — 謝謝你的誠實！情緒沒有對錯。`;
+      setTimeout(() => { setLog(`你感受到了「${em.name}」——認識情緒，是掌控它的第一步！`); completeMiniGame(); }, 1000);
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function renderTrustGame(area) {
+  let steps = 0;
+  area.innerHTML = `<div class="minigame-container">
+    <div class="minigame-title">🤝 跟著引路人前進！</div>
+    <div class="trust-scene" id="trust-scene">🧒 <span style="color:var(--text-dim);font-size:1rem;">→→→→→→→→→</span> 🌟</div>
+    <div class="trust-path" id="trust-path" onclick="trustStep()">
+      <div class="trust-player" id="trust-player">🧒</div>
+      <div class="trust-guide">🌟</div>
+    </div>
+    <div id="trust-status" style="font-size:0.8rem;color:var(--text-dim);text-align:center">點擊路徑跟著前進：0/5步</div>
+  </div>`;
+
+  window._trustSteps = 0;
+}
+
+function trustStep() {
+  window._trustSteps = (window._trustSteps || 0) + 1;
+  const pct = Math.min(window._trustSteps / 5, 0.8);
+  const player = document.getElementById('trust-player');
+  if (player) player.style.left = (10 + pct * 60) + '%';
+  const status = document.getElementById('trust-status');
+  if (status) status.textContent = `跟著前進：${window._trustSteps}/5步`;
+  if (window._trustSteps >= 5) {
+    if (status) status.textContent = '✨ 你成功把自己交給了夥伴的引導！';
+    setLog('🌟 你學會了信任！把自己交給夥伴，原來是這樣的感覺！');
+    setTimeout(completeMiniGame, 800);
+  }
+}
+
+// ============================================================
+//  MINIGAME COMPLETE → BATTLE PHASE
+// ============================================================
+function completeMiniGame() {
+  const area = document.getElementById('minigame-area');
+  area.innerHTML = '';
+  setActionsEnabled(true);
+  setLog('心靈試煉完成！現在用勇氣擊敗敵人吧！');
+  updateBattleProgress(1);
+}
+
+// ============================================================
+//  BATTLE ACTIONS
+// ============================================================
+function doAction(type) {
+  if (!state.battleState) return;
+  const bs = state.battleState;
+  setActionsEnabled(false);
+
+  let dmg = 0, msg = '';
+
+  if (type === 'attack') {
+    dmg = Math.floor(state.atk * 3 + Math.random() * 15);
+    msg = `⚔️ ${state.playerName} 發動勇氣攻擊！造成 ${dmg} 點傷害！`;
+  } else if (type === 'skill') {
+    dmg = Math.floor(state.atk * 5 + Math.random() * 20);
+    msg = `✨ 特殊技能爆發！造成 ${dmg} 點魔法傷害！`;
+    const em = document.getElementById('player-emoji');
+    em.classList.add('pulse');
+    setTimeout(() => em.classList.remove('pulse'), 500);
+  } else if (type === 'item') {
+    const heal = 20;
+    bs.playerHp = Math.min(bs.playerMaxHp, bs.playerHp + heal);
+    state.hp = bs.playerHp;
+    msg = `🍬 使用道具回復 ${heal} HP！`;
+    dmg = Math.floor(state.atk * 2);
+    setTimeout(() => updateBattleBars(), 100);
+  } else if (type === 'defend') {
+    bs.defending = true;
+    dmg = Math.floor(state.atk * 1.5);
+    msg = `🛡️ 守護心念！防禦姿態，造成 ${dmg} 點反傷！`;
+  }
+
+  // Deal damage
+  bs.enemyHp = Math.max(0, bs.enemyHp - dmg);
+  const enemyEl = document.getElementById('enemy-emoji');
+  enemyEl.classList.add('shake');
+  setTimeout(() => enemyEl.classList.remove('shake'), 400);
+
+  setLog(msg);
+  updateBattleBars();
+
+  if (bs.enemyHp <= 0) {
+    setTimeout(winBattle, 800);
+    return;
+  }
+
+  // Enemy counter
+  setTimeout(() => {
+    const day = DAYS_DATA[state.currentDay - 1];
+    let atkDmg = Math.floor(day.enemy.atk * (0.7 + Math.random() * 0.6));
+    if (bs.defending) { atkDmg = Math.floor(atkDmg * 0.5); bs.defending = false; }
+    bs.playerHp = Math.max(0, bs.playerHp - atkDmg);
+    state.hp = bs.playerHp;
+
+    const playerEl = document.getElementById('player-emoji');
+    playerEl.classList.add('shake');
+    setTimeout(() => playerEl.classList.remove('shake'), 400);
+
+    setLog(`💢 ${day.enemy.name} 反擊！你受到 ${atkDmg} 點傷害！`);
+    updateBattleBars();
+
+    bs.phase++;
+    updateBattleProgress(1 + bs.phase);
+
+    if (bs.playerHp <= 0) {
+      setTimeout(loseBattle, 800);
+    } else {
+      setTimeout(() => setActionsEnabled(true), 600);
+    }
+  }, 1000);
+}
+
+function updateBattleBars() {
+  const bs = state.battleState;
+  if (!bs) return;
+  const pPct = (bs.playerHp / bs.playerMaxHp) * 100;
+  const ePct = (bs.enemyHp / bs.enemyMaxHp) * 100;
+  document.getElementById('player-hp-bar').style.width = pPct + '%';
+  document.getElementById('enemy-hp-bar').style.width = ePct + '%';
+  document.getElementById('player-hp').textContent = `HP: ${bs.playerHp}/${bs.playerMaxHp}`;
+  document.getElementById('enemy-hp').textContent = `HP: ${bs.enemyHp}/${bs.enemyMaxHp}`;
+}
+
+function updateBattleProgress(step) {
+  const pct = Math.min((step / 4) * 100, 100);
+  document.getElementById('battle-progress').style.width = pct + '%';
+  document.getElementById('battle-progress-text').textContent = `${step}/4`;
+}
+
+function setActionsEnabled(en) {
+  document.querySelectorAll('.action-btn').forEach(b => b.disabled = !en);
+}
+
+function setLog(text) {
+  const el = document.getElementById('log-text');
+  el.style.opacity = '0';
+  setTimeout(() => { el.textContent = text; el.style.opacity = '1'; }, 200);
+}
+
+// ============================================================
+//  WIN / LOSE
+// ============================================================
+function winBattle() {
+  const quest = state.currentQuest;
+  if (!quest) return;
+
+  state.completedQuests.push(quest.id);
+  state.xp += quest.xp;
+  state.score += quest.xp * 10;
+  state.atk += 1;
+
+  // Give reward item
+  if (!state.inventory.find(i => i.name === quest.reward)) {
+    state.inventory.push({ name: quest.reward, icon: quest.rewardIcon, desc: quest.rewardDesc });
+  }
+
+  // Check day completion → unlock next day
+  const day = DAYS_DATA[state.currentDay - 1];
+  const dayDone = day.quests.every(q => state.completedQuests.includes(q.id));
+  if (dayDone && state.currentDay < 4) {
+    state.unlockedDays.push(state.currentDay + 1);
+    showNotif(`🎉 Day ${state.currentDay} 完成！Day ${state.currentDay + 1} 已解鎖！`);
+  }
+
+  // Show reward
+  document.getElementById('reward-screen').classList.add('active');
+  document.getElementById('reward-icon').textContent = quest.rewardIcon;
+  document.getElementById('reward-item').textContent = `獲得道具：${quest.reward}`;
+  document.getElementById('reward-desc').textContent = quest.rewardDesc;
+  updateHUD();
+  renderInventory();
+}
+
+function loseBattle() {
+  state.hp = Math.max(10, state.hp - 20);
+  setLog('💀 你這次沒有成功……但失敗也是學習！重新嘗試！');
+  setActionsEnabled(false);
+  setTimeout(() => {
+    showNotif('💪 再試一次！你會成功的！');
+    showScreen('quest-screen');
+    const day = DAYS_DATA[state.currentDay - 1];
+    renderQuestList(day);
+  }, 2000);
+}
+
+function closeReward() {
+  document.getElementById('reward-screen').classList.remove('active');
+  // Check if all quests done
+  const totalQuests = DAYS_DATA.flatMap(d => d.quests).length;
+  if (state.completedQuests.length >= totalQuests) {
+    showFinalEnding();
+    return;
+  }
+  showScreen('quest-screen');
+  const day = DAYS_DATA[state.currentDay - 1];
+  renderQuestList(day);
+  renderDayMap();
+  renderMapProgress();
+}
+
+// ============================================================
+//  FINAL ENDING
+// ============================================================
+function showFinalEnding() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('hud').classList.remove('visible');
+
+  const screen = document.createElement('div');
+  screen.style.cssText = `position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;`;
+  screen.innerHTML = `
+    <div style="animation:fadeInUp 1s ease both">
+      <div style="font-size:5rem;animation:flicker 2s ease-in-out infinite alternate;margin-bottom:1rem;">🕯</div>
+      <div style="font-family:'Cinzel Decorative',serif;font-size:2rem;color:var(--gold);margin-bottom:0.5rem;text-shadow:var(--shadow-gold);">
+        燭光完整點燃！
+      </div>
+      <div style="font-family:'Noto Serif TC',serif;font-size:1rem;color:var(--text-dim);margin:1.5rem 0;line-height:2">
+        ${state.playerName}，你穿越了：<br>
+        🕯 自我懷疑 · 🌊 情緒迷霧 · ⚡ 停滯之鎖 · 🌟 孤獨巨像<br><br>
+        你找回了那個真正的自己。<br>
+        燭光從未熄滅——<strong style="color:var(--gold)">因為你從來都不是一個人</strong>。
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;max-width:400px;margin:1rem auto;">
+        <div style="background:var(--panel);border:1px solid var(--gold);padding:0.75rem;border-radius:2px;">
+          <div style="font-size:1.5rem">⚡</div>
+          <div style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:var(--gold)">${state.xp}</div>
+          <div style="font-size:0.65rem;color:var(--text-dim)">總 XP</div>
+        </div>
+        <div style="background:var(--panel);border:1px solid var(--gold);padding:0.75rem;border-radius:2px;">
+          <div style="font-size:1.5rem">🏆</div>
+          <div style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:var(--gold)">${state.score}</div>
+          <div style="font-size:0.65rem;color:var(--text-dim)">分數</div>
+        </div>
+        <div style="background:var(--panel);border:1px solid var(--gold);padding:0.75rem;border-radius:2px;">
+          <div style="font-size:1.5rem">🎒</div>
+          <div style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:var(--gold)">${state.inventory.length}</div>
+          <div style="font-size:0.65rem;color:var(--text-dim)">道具</div>
+        </div>
+      </div>
+      <div style="margin-top:2rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+        ${state.inventory.map(i => `<span style="font-size:1.5rem" title="${i.name}">${i.icon}</span>`).join('')}
+      </div>
+      <button class="btn-primary" onclick="location.reload()" style="margin-top:2rem"><span>🔁 再次冒險</span></button>
+    </div>
+  `;
+  document.body.appendChild(screen);
+}
+
+// ============================================================
+//  INVENTORY
+// ============================================================
+function renderInventory() {
+  const container = document.getElementById('inv-items');
+  container.innerHTML = '';
+  if (state.inventory.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:0.85rem;text-align:center;">背包是空的…</div>';
+    return;
+  }
+  state.inventory.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'inv-item';
+    el.innerHTML = `
+      <span class="inv-icon">${item.icon}</span>
+      <div>
+        <div class="inv-name">${item.name}</div>
+        <div class="inv-desc">${item.desc}</div>
+      </div>
+    `;
+    container.appendChild(el);
+  });
+  document.getElementById('stat-atk').textContent = state.atk;
+}
+
+function toggleInventory() {
+  document.getElementById('inventory-panel').classList.toggle('open');
+  renderInventory();
+}
+
+// ============================================================
+//  NOTIFICATION
+// ============================================================
+function showNotif(msg) {
+  const notif = document.createElement('div');
+  notif.className = 'notif';
+  notif.textContent = msg;
+  document.body.appendChild(notif);
+  setTimeout(() => notif.remove(), 3100);
+}
+</script>
+</body>
+</html>
